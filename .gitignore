@@ -1,0 +1,18 @@
+# User specific requests
+*.class
+*.bin
+*.hprof
+*.env
+
+# Android/Gradle standard ignores
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.ap_
