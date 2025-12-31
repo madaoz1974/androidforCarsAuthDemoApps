@@ -70,7 +70,7 @@ class AzureAuthProvider @Inject constructor(
             userCode = jsonObject.getString("user_code"),
             // Azure uses verification_uri
             verificationUrl = jsonObject.getString("verification_uri"),
-            expiresIn = jsonObject.getInt("expires_in"),
+            expiresIn = 900, // Force 15 minutes timeout
             interval = jsonObject.optInt("interval", 5) // Azure might not return interval, default to 5
         )
     }

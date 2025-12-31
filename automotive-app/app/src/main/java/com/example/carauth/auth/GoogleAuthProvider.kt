@@ -61,7 +61,7 @@ class GoogleAuthProvider @Inject constructor(
             deviceCode = jsonObject.getString("device_code"),
             userCode = jsonObject.getString("user_code"),
             verificationUrl = jsonObject.getString("verification_url"),
-            expiresIn = jsonObject.getInt("expires_in"),
+            expiresIn = 900, // Force 15 minutes timeout
             interval = jsonObject.getInt("interval")
         )
     }

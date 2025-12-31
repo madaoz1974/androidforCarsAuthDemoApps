@@ -8,8 +8,7 @@ class AuthProviderFactory @Inject constructor(
     private val azureProvider: AzureAuthProvider
 ) {
     private val providers = mapOf(
-        ProviderType.GOOGLE to googleProvider,
-        ProviderType.AZURE to azureProvider
+        ProviderType.GOOGLE to googleProvider
     )
     
     fun getProvider(type: ProviderType): AuthProvider = 
