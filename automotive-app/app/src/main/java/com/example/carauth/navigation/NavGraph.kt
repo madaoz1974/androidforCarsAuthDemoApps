@@ -32,7 +32,7 @@ fun NavGraph(
             LaunchedEffect(authState) {
                 when (authState) {
                     is AuthState.DisplayingQR -> navController.navigate(Screen.QRCode.route)
-                    is AuthState.Authenticated, is AuthState.Error -> navController.navigate(Screen.AuthStatus.route)
+                    is AuthState.Authenticated -> navController.navigate(Screen.AuthStatus.route)
                     else -> { /* Stay here */ }
                 }
             }
@@ -51,7 +51,7 @@ fun NavGraph(
                 // Check if we moved out of DisplayingQR
                 LaunchedEffect(authState) {
                      when (authState) {
-                         is AuthState.Authenticated, is AuthState.Error -> {
+                         is AuthState.Authenticated -> {
                              navController.navigate(Screen.AuthStatus.route) {
                                  popUpTo(Screen.ProviderSelection.route)
                              }
@@ -71,7 +71,7 @@ fun NavGraph(
                  LaunchedEffect(Unit) {
                      // If we are here but state is not DisplayingQR, it means we probably navigated away or back
                      // Just in case, redirect or show loading
-                     if (state is AuthState.Authenticated || state is AuthState.Error) {
+                     if (state is AuthState.Authenticated) {
                           navController.navigate(Screen.AuthStatus.route) {
                               popUpTo(Screen.ProviderSelection.route)
                           }
@@ -89,14 +89,6 @@ fun NavGraph(
              
              AuthStatusScreen(
                 state = authState,
-                onRetry = {
-                    authViewModel.resetInfo()
-                    // resetInfo sets state to Idle.
-                    // The ProviderSelection screen observes Idle and stays there.
-                    navController.navigate(Screen.ProviderSelection.route) {
-                        popUpTo(Screen.ProviderSelection.route) { inclusive = true }
-                    }
-                },
                 onReset = {
                     authViewModel.resetInfo()
                     navController.navigate(Screen.ProviderSelection.route) {
