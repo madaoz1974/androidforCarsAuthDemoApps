@@ -64,6 +64,9 @@ class AuthViewModel @Inject constructor(
 
     private suspend fun pollToken(provider: AuthProvider, deviceCode: String, interval: Long) {
         var isPolling = true
+        var retryCount = 0
+        val maxRetries = 5  // 一時的なエラーの最大リトライ回数
+
         while (isPolling) {
             if (_authState.value !is AuthState.DisplayingQR) {
                 isPolling = false
@@ -82,10 +85,31 @@ class AuthViewModel @Inject constructor(
                     userName = null
                 )
             }.onFailure { e ->
-                if (e.message != "authorization_pending" && e.message != "slow_down") {
-                    isPolling = false
-                    // Instead of showing an error, restart the authentication process to get a new code
-                    startAuth(provider)
+                when (val message = e.message ?: "") {
+                    "authorization_pending" -> {
+                        // ユーザーがまだ認証していない - 継続
+                        retryCount = 0  // 正常なポーリング応答なのでリセット
+                    }
+                    "slow_down" -> {
+                        // レート制限 - 待機時間を延長して継続
+                        delay(interval)
+                        retryCount = 0
+                    }
+                    "expired_token", "access_denied", "invalid_grant" -> {
+                        // 永続的なエラー - 再認証が必要
+                        isPolling = false
+                        startAuth(provider)
+                    }
+                    else -> {
+                        // 一時的なエラー（ネットワーク等）- リトライ
+                        retryCount++
+                        if (retryCount >= maxRetries) {
+                            isPolling = false
+                            startAuth(provider)
+                        }
+                        // リトライ前に追加待機
+                        delay(interval)
+                    }
                 }
             }
         }
