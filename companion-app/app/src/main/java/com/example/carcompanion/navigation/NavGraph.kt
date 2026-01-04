@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavDeepLink
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -76,7 +77,6 @@ fun NavGraph(
                     providerInfo = providerInfo,
                     onConfirm = {
                         customTabsHelper.openAuthUrl(providerInfo)
-                        navController.navigate(Screen.Result.createRoute(true))
                     },
                     onCancel = {
                         scanViewModel.resetScan()
@@ -93,9 +93,10 @@ fun NavGraph(
         
         composable(
             route = Screen.Result.route,
-            arguments = listOf(navArgument("success") { type = NavType.BoolType })
+            arguments = listOf(navArgument("success") { type = NavType.BoolType }),
+            deepLinks = listOf(NavDeepLink("carauth://auth"))
         ) { backStackEntry ->
-            val success = backStackEntry.arguments?.getBoolean("success") ?: false
+            val success = backStackEntry.arguments?.getBoolean("success") ?: true
             
             ResultScreen(
                 success = success,
