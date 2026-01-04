@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning // Error -> Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +25,6 @@ import com.example.carauth.auth.AuthState
 @Composable
 fun AuthStatusScreen(
     state: AuthState,
-    onRetry: () -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -59,32 +57,6 @@ fun AuthStatusScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                     Button(onClick = onReset) {
                         Text("終了")
-                    }
-                }
-            }
-            is AuthState.Error -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Filled.Warning, // Error -> Warning
-                        contentDescription = null,
-                        modifier = Modifier.size(96.dp),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        text = stringResource(R.string.auth_failed),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = state.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(32.dp))
-                    Button(onClick = onRetry) {
-                        Text(stringResource(R.string.retry))
                     }
                 }
             }
