@@ -63,20 +63,24 @@ class AuthViewModel @Inject constructor(
     }
 
     private suspend fun pollToken(provider: AuthProvider, deviceCode: String, interval: Long) {
+        android.util.Log.d("AuthViewModel", "pollToken started: deviceCode=${deviceCode.take(10)}..., interval=$interval")
         var isPolling = true
         var retryCount = 0
         val maxRetries = 5  // 一時的なエラーの最大リトライ回数
 
         while (isPolling) {
             if (_authState.value !is AuthState.DisplayingQR) {
+                android.util.Log.d("AuthViewModel", "pollToken: State changed, stopping polling")
                 isPolling = false
                 break
             }
 
             delay(interval)
+            android.util.Log.d("AuthViewModel", "pollToken: Polling for token...")
 
             val result = provider.pollToken(deviceCode)
             result.onSuccess { token ->
+                android.util.Log.d("AuthViewModel", "pollToken: SUCCESS! Token received")
                 isPolling = false
                 _authState.value = AuthState.Authenticated(
                     provider = provider,
@@ -85,25 +89,32 @@ class AuthViewModel @Inject constructor(
                     userName = null
                 )
             }.onFailure { e ->
-                when (val message = e.message ?: "") {
+                val message = e.message ?: ""
+                android.util.Log.d("AuthViewModel", "pollToken: Failed with message: $message")
+                when (message) {
                     "authorization_pending" -> {
                         // ユーザーがまだ認証していない - 継続
+                        android.util.Log.d("AuthViewModel", "pollToken: Authorization pending, continuing...")
                         retryCount = 0  // 正常なポーリング応答なのでリセット
                     }
                     "slow_down" -> {
                         // レート制限 - 待機時間を延長して継続
+                        android.util.Log.d("AuthViewModel", "pollToken: Slow down, waiting extra interval")
                         delay(interval)
                         retryCount = 0
                     }
                     "expired_token", "access_denied", "invalid_grant" -> {
                         // 永続的なエラー - 再認証が必要
+                        android.util.Log.w("AuthViewModel", "pollToken: Permanent error ($message), restarting auth")
                         isPolling = false
                         startAuth(provider)
                     }
                     else -> {
                         // 一時的なエラー（ネットワーク等）- リトライ
                         retryCount++
+                        android.util.Log.w("AuthViewModel", "pollToken: Temporary error, retry $retryCount/$maxRetries")
                         if (retryCount >= maxRetries) {
+                            android.util.Log.e("AuthViewModel", "pollToken: Max retries exceeded, restarting auth")
                             isPolling = false
                             startAuth(provider)
                         }

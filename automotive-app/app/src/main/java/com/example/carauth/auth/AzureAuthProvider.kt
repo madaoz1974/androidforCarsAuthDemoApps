@@ -70,6 +70,7 @@ class AzureAuthProvider @Inject constructor(
             userCode = jsonObject.getString("user_code"),
             // Azure uses verification_uri
             verificationUrl = jsonObject.getString("verification_uri"),
+            verificationUrlComplete = jsonObject.optString("verification_uri_complete", null),
             expiresIn = 900, // Force 15 minutes timeout
             interval = jsonObject.optInt("interval", 5) // Azure might not return interval, default to 5
         )
@@ -119,8 +120,10 @@ class AzureAuthProvider @Inject constructor(
     }
     
     override fun buildQRCodeContent(response: DeviceCodeResponse): String {
+        // Use verification_uri_complete if available for auto-fill in browser
+        val url = response.verificationUrlComplete ?: response.verificationUrl
         return "carauth://auth?provider=azure&url=${
-            URLEncoder.encode(response.verificationUrl, "UTF-8")
+            URLEncoder.encode(url, "UTF-8")
         }&code=${response.userCode}"
     }
     

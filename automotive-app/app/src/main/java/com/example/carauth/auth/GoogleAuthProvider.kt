@@ -61,6 +61,7 @@ class GoogleAuthProvider @Inject constructor(
             deviceCode = jsonObject.getString("device_code"),
             userCode = jsonObject.getString("user_code"),
             verificationUrl = jsonObject.getString("verification_url"),
+            verificationUrlComplete = jsonObject.optString("verification_uri_complete", null),
             expiresIn = 900, // Force 15 minutes timeout
             interval = jsonObject.getInt("interval")
         )
@@ -112,8 +113,10 @@ class GoogleAuthProvider @Inject constructor(
     }
     
     override fun buildQRCodeContent(response: DeviceCodeResponse): String {
+        // Use verification_uri_complete if available for auto-fill in browser
+        val url = response.verificationUrlComplete ?: response.verificationUrl
         return "carauth://auth?provider=google&url=${
-            URLEncoder.encode(response.verificationUrl, "UTF-8")
+            URLEncoder.encode(url, "UTF-8")
         }&code=${response.userCode}"
     }
     

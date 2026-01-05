@@ -4,10 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.carcompanion.navigation.NavGraph
 import com.example.carcompanion.ui.theme.Theme
+import com.example.carcompanion.viewmodel.ScanViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -20,7 +22,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             Theme {
                 navController = rememberNavController()
-                NavGraph(navController = navController)
+                // Create ScanViewModel at Activity scope to persist across navigation
+                val scanViewModel: ScanViewModel = hiltViewModel()
+                NavGraph(
+                    navController = navController,
+                    scanViewModel = scanViewModel
+                )
             }
         }
     }

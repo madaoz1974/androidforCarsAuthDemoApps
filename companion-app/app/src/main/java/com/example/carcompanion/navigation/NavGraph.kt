@@ -31,10 +31,9 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(
     navController: NavHostController,
+    scanViewModel: ScanViewModel,
     startDestination: String = Screen.Home.route
 ) {
-    val scanViewModel: ScanViewModel = hiltViewModel()
-    
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -93,7 +92,10 @@ fun NavGraph(
         
         composable(
             route = Screen.Result.route,
-            arguments = listOf(navArgument("success") { type = NavType.BoolType }),
+            arguments = listOf(navArgument("success") { 
+                type = NavType.BoolType
+                defaultValue = true
+            }),
             deepLinks = listOf(NavDeepLink("carauth://auth"))
         ) { backStackEntry ->
             val success = backStackEntry.arguments?.getBoolean("success") ?: true
