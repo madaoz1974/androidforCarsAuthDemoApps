@@ -65,10 +65,9 @@ class AuthViewModel @Inject constructor(
     private suspend fun pollToken(provider: AuthProvider, deviceCode: String, interval: Long) {
         android.util.Log.d("AuthViewModel", "pollToken started: deviceCode=${deviceCode.take(10)}..., interval=$interval")
         var isPolling = true
-        var retryCount = 0
-        val maxRetries = 5  // 一時的なエラーの最大リトライ回数
 
         while (isPolling) {
+            // Check if state changed (e.g., user cancelled)
             if (_authState.value !is AuthState.DisplayingQR) {
                 android.util.Log.d("AuthViewModel", "pollToken: State changed, stopping polling")
                 isPolling = false
@@ -93,37 +92,35 @@ class AuthViewModel @Inject constructor(
                 android.util.Log.d("AuthViewModel", "pollToken: Failed with message: $message")
                 when (message) {
                     "authorization_pending" -> {
-                        // ユーザーがまだ認証していない - 継続
+                        // User hasn't authenticated yet - continue polling
                         android.util.Log.d("AuthViewModel", "pollToken: Authorization pending, continuing...")
-                        retryCount = 0  // 正常なポーリング応答なのでリセット
+                        // Just continue the loop
                     }
                     "slow_down" -> {
-                        // レート制限 - 待機時間を延長して継続
+                        // Rate limited - wait extra interval
                         android.util.Log.d("AuthViewModel", "pollToken: Slow down, waiting extra interval")
-                        delay(interval)
-                        retryCount = 0
+                        delay(interval * 2)
                     }
-                    "expired_token", "access_denied", "invalid_grant" -> {
-                        // 永続的なエラー - 再認証が必要
-                        android.util.Log.w("AuthViewModel", "pollToken: Permanent error ($message), restarting auth")
+                    "expired_token" -> {
+                        // Device code expired - stop polling, user needs to restart
+                        android.util.Log.w("AuthViewModel", "pollToken: Device code expired")
                         isPolling = false
-                        startAuth(provider)
+                        // Don't auto-restart - keep displaying current QR so user knows to restart
+                    }
+                    "access_denied" -> {
+                        // User denied access - stop polling
+                        android.util.Log.w("AuthViewModel", "pollToken: Access denied by user")
+                        isPolling = false
                     }
                     else -> {
-                        // 一時的なエラー（ネットワーク等）- リトライ
-                        retryCount++
-                        android.util.Log.w("AuthViewModel", "pollToken: Temporary error, retry $retryCount/$maxRetries")
-                        if (retryCount >= maxRetries) {
-                            android.util.Log.e("AuthViewModel", "pollToken: Max retries exceeded, restarting auth")
-                            isPolling = false
-                            startAuth(provider)
-                        }
-                        // リトライ前に追加待機
+                        // Network error or other temporary issue - just wait and retry
+                        android.util.Log.w("AuthViewModel", "pollToken: Temporary error ($message), will retry")
                         delay(interval)
                     }
                 }
             }
         }
+        android.util.Log.d("AuthViewModel", "pollToken: Polling loop ended")
     }
 
     private fun generateQRCode(content: String): Bitmap {
