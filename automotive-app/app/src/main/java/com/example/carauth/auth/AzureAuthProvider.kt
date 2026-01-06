@@ -70,7 +70,8 @@ class AzureAuthProvider @Inject constructor(
             userCode = jsonObject.getString("user_code"),
             // Azure uses verification_uri
             verificationUrl = jsonObject.getString("verification_uri"),
-            expiresIn = jsonObject.getInt("expires_in"),
+            verificationUrlComplete = jsonObject.optString("verification_uri_complete", null),
+            expiresIn = 900, // Force 15 minutes timeout
             interval = jsonObject.optInt("interval", 5) // Azure might not return interval, default to 5
         )
     }
@@ -91,19 +92,19 @@ class AzureAuthProvider @Inject constructor(
 
                 if (response.isSuccessful) {
                     val body = response.body?.string()
+                    android.util.Log.d("AzureAuthProvider", "pollToken SUCCESS: $body")
                     val token = parseTokenResponse(body)
                     Result.success(token)
                 } else {
-                     val body = response.body?.string()
+                    val body = response.body?.string()
+                    android.util.Log.d("AzureAuthProvider", "pollToken response: $body")
                     val json = JSONObject(body ?: "{}")
-                    val error = json.optString("error")
-                    if (error == "authorization_pending" || error == "slow_down") {
-                         Result.failure(AuthException(error))
-                    } else {
-                        Result.failure(AuthException("Failed to get token: $error"))
-                    }
+                    val error = json.optString("error", "unknown_error")
+                    // Return raw error code for AuthViewModel to handle
+                    Result.failure(AuthException(error))
                 }
             } catch (e: Exception) {
+                android.util.Log.e("AzureAuthProvider", "pollToken exception: ${e.message}")
                 Result.failure(e)
             }
         }
@@ -119,8 +120,10 @@ class AzureAuthProvider @Inject constructor(
     }
     
     override fun buildQRCodeContent(response: DeviceCodeResponse): String {
+        // Use verification_uri_complete if available for auto-fill in browser
+        val url = response.verificationUrlComplete ?: response.verificationUrl
         return "carauth://auth?provider=azure&url=${
-            URLEncoder.encode(response.verificationUrl, "UTF-8")
+            URLEncoder.encode(url, "UTF-8")
         }&code=${response.userCode}"
     }
     

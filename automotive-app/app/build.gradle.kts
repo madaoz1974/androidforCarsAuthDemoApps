@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -24,10 +27,16 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "GOOGLE_CLIENT_ID", "\"YOUR_GOOGLE_CLIENT_ID\"")
-            buildConfigField("String", "AZURE_TENANT_ID", "\"YOUR_AZURE_TENANT_ID\"")
-            buildConfigField("String", "AZURE_CLIENT_ID", "\"YOUR_AZURE_CLIENT_ID\"")
-            buildConfigField("String", "AZURE_USE_CIAM", "\"true\"")
+            val env = Properties()
+            val envFile = file("../.env")
+            if (envFile.exists()) {
+                env.load(FileInputStream(envFile))
+            }
+
+            buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${env.getProperty("GOOGLE_CLIENT_ID") ?: "YOUR_GOOGLE_CLIENT_ID"}\"")
+            buildConfigField("String", "AZURE_TENANT_ID", "\"${env.getProperty("AZURE_TENANT_ID") ?: "YOUR_AZURE_TENANT_ID"}\"")
+            buildConfigField("String", "AZURE_CLIENT_ID", "\"${env.getProperty("AZURE_CLIENT_ID") ?: "YOUR_AZURE_CLIENT_ID"}\"")
+            buildConfigField("String", "AZURE_USE_CIAM", "\"${env.getProperty("AZURE_USE_CIAM") ?: "true"}\"")
         }
         release {
             isMinifyEnabled = false

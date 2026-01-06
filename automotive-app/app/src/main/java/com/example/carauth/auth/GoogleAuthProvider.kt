@@ -61,7 +61,8 @@ class GoogleAuthProvider @Inject constructor(
             deviceCode = jsonObject.getString("device_code"),
             userCode = jsonObject.getString("user_code"),
             verificationUrl = jsonObject.getString("verification_url"),
-            expiresIn = jsonObject.getInt("expires_in"),
+            verificationUrlComplete = jsonObject.optString("verification_uri_complete", null),
+            expiresIn = 900, // Force 15 minutes timeout
             interval = jsonObject.getInt("interval")
         )
     }
@@ -82,21 +83,19 @@ class GoogleAuthProvider @Inject constructor(
 
                 if (response.isSuccessful) {
                     val body = response.body?.string()
+                    android.util.Log.d("GoogleAuthProvider", "pollToken SUCCESS: $body")
                     val token = parseTokenResponse(body)
                     Result.success(token)
                 } else {
                     val body = response.body?.string()
+                    android.util.Log.d("GoogleAuthProvider", "pollToken response: $body")
                     val json = JSONObject(body ?: "{}")
-                    val error = json.optString("error")
-                    if (error == "authorization_pending" || error == "slow_down") {
-                        // These are expected errors during polling, but we return failure
-                        // so the caller knows to retry or wait.
-                         Result.failure(AuthException(error))
-                    } else {
-                        Result.failure(AuthException("Failed to get token: $error"))
-                    }
+                    val error = json.optString("error", "unknown_error")
+                    // Return raw error code for AuthViewModel to handle
+                    Result.failure(AuthException(error))
                 }
             } catch (e: Exception) {
+                android.util.Log.e("GoogleAuthProvider", "pollToken exception: ${e.message}")
                 Result.failure(e)
             }
         }
@@ -112,8 +111,10 @@ class GoogleAuthProvider @Inject constructor(
     }
     
     override fun buildQRCodeContent(response: DeviceCodeResponse): String {
+        // Use verification_uri_complete if available for auto-fill in browser
+        val url = response.verificationUrlComplete ?: response.verificationUrl
         return "carauth://auth?provider=google&url=${
-            URLEncoder.encode(response.verificationUrl, "UTF-8")
+            URLEncoder.encode(url, "UTF-8")
         }&code=${response.userCode}"
     }
     

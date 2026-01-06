@@ -1,7 +1,6 @@
 package com.example.carauth.auth
 
 import android.graphics.Bitmap
-import android.graphics.Color as AndroidColor
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -23,10 +22,5 @@ sealed class AuthState {
         val accessToken: String,
         val userEmail: String?,
         val userName: String?
-    ) : AuthState()
-    data class Error(
-        val provider: AuthProvider?,
-        val message: String,
-        val canRetry: Boolean = true
     ) : AuthState()
 }

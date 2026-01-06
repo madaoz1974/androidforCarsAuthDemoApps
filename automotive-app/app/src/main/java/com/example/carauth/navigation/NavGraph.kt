@@ -1,6 +1,7 @@
 package com.example.carauth.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,10 +29,12 @@ fun NavGraph(
     ) {
         composable(Screen.ProviderSelection.route) {
             // Check state to navigate
-            when (authState) {
-                is AuthState.DisplayingQR -> navController.navigate(Screen.QRCode.route)
-                is AuthState.Authenticated, is AuthState.Error -> navController.navigate(Screen.AuthStatus.route)
-                else -> { /* Stay here */ }
+            LaunchedEffect(authState) {
+                when (authState) {
+                    is AuthState.DisplayingQR -> navController.navigate(Screen.QRCode.route)
+                    is AuthState.Authenticated -> navController.navigate(Screen.AuthStatus.route)
+                    else -> { /* Stay here */ }
+                }
             }
             
             ProviderSelectionScreen(
@@ -46,14 +49,16 @@ fun NavGraph(
             val state = authState // Capture for smart cast
             if (state is AuthState.DisplayingQR) {
                 // Check if we moved out of DisplayingQR
-                 when (authState) {
-                     is AuthState.Authenticated, is AuthState.Error -> {
-                         navController.navigate(Screen.AuthStatus.route) {
-                             popUpTo(Screen.ProviderSelection.route)
+                LaunchedEffect(authState) {
+                     when (authState) {
+                         is AuthState.Authenticated -> {
+                             navController.navigate(Screen.AuthStatus.route) {
+                                 popUpTo(Screen.ProviderSelection.route)
+                             }
                          }
+                         else -> {}
                      }
-                     else -> {}
-                 }
+                }
 
                 QRCodeScreen(
                     state = state,
@@ -63,26 +68,27 @@ fun NavGraph(
                     }
                 )
             } else {
-                 // If we are here but state is not DisplayingQR, it means we probably navigated away or back
-                 // Just in case, redirect or show loading
-                 if (state is AuthState.Authenticated || state is AuthState.Error) {
-                      navController.navigate(Screen.AuthStatus.route)
-                 } else {
-                     // Go back
-                     navController.popBackStack()
+                 LaunchedEffect(Unit) {
+                     // If we are here but state is not DisplayingQR, it means we probably navigated away or back
+                     // Just in case, redirect or show loading
+                     if (state is AuthState.Authenticated) {
+                          navController.navigate(Screen.AuthStatus.route) {
+                              popUpTo(Screen.ProviderSelection.route)
+                          }
+                     } else {
+                         // Go back
+                         navController.popBackStack()
+                     }
                  }
             }
         }
         
         composable(Screen.AuthStatus.route) {
+             // Only reset if we are intentionally leaving this screen via buttons
+             // No auto-navigation here generally
+             
              AuthStatusScreen(
                 state = authState,
-                onRetry = {
-                    authViewModel.resetInfo()
-                    navController.navigate(Screen.ProviderSelection.route) {
-                        popUpTo(Screen.ProviderSelection.route) { inclusive = true }
-                    }
-                },
                 onReset = {
                     authViewModel.resetInfo()
                     navController.navigate(Screen.ProviderSelection.route) {

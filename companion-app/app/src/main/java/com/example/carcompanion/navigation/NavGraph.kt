@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavDeepLink
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -30,10 +31,9 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(
     navController: NavHostController,
+    scanViewModel: ScanViewModel,
     startDestination: String = Screen.Home.route
 ) {
-    val scanViewModel: ScanViewModel = hiltViewModel()
-    
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -71,14 +71,21 @@ fun NavGraph(
             if (providerInfo != null) {
                 val authViewModel: AuthViewModel = hiltViewModel()
                 val customTabsHelper = authViewModel.customTabsHelper
+                val bluetoothScanState by authViewModel.scanState.collectAsState()
+                val bluetoothConnectionState by authViewModel.connectionState.collectAsState()
+                
+                // Start Bluetooth scanning when entering this screen
+                LaunchedEffect(Unit) {
+                    authViewModel.startBluetoothScan()
+                }
                 
                 ProviderConfirmScreen(
                     providerInfo = providerInfo,
                     onConfirm = {
                         customTabsHelper.openAuthUrl(providerInfo)
-                        navController.navigate(Screen.Result.createRoute(true))
                     },
                     onCancel = {
+                        authViewModel.stopBluetoothScan()
                         scanViewModel.resetScan()
                         navController.popBackStack(Screen.Home.route, false)
                     }
@@ -93,9 +100,13 @@ fun NavGraph(
         
         composable(
             route = Screen.Result.route,
-            arguments = listOf(navArgument("success") { type = NavType.BoolType })
+            arguments = listOf(navArgument("success") { 
+                type = NavType.BoolType
+                defaultValue = true
+            }),
+            deepLinks = listOf(NavDeepLink("carauth://auth"))
         ) { backStackEntry ->
-            val success = backStackEntry.arguments?.getBoolean("success") ?: false
+            val success = backStackEntry.arguments?.getBoolean("success") ?: true
             
             ResultScreen(
                 success = success,
