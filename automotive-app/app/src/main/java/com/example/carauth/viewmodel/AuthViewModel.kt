@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.carauth.auth.AuthProvider
 import com.example.carauth.auth.AuthProviderFactory
 import com.example.carauth.auth.AuthState
+import com.example.carauth.bluetooth.BluetoothAuthService
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -20,16 +21,42 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authProviderFactory: AuthProviderFactory
+    private val authProviderFactory: AuthProviderFactory,
+    private val bluetoothAuthService: BluetoothAuthService
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     val providers: List<AuthProvider> = authProviderFactory.getAllProviders()
+    
+    // Expose Bluetooth states for UI
+    val isBluetoothAdvertising = bluetoothAuthService.isAdvertising
+    val bluetoothConnectionState = bluetoothAuthService.connectionState
+
+    init {
+        // Listen for tokens received via Bluetooth
+        viewModelScope.launch {
+            bluetoothAuthService.receivedToken.collect { token ->
+                if (token != null && _authState.value is AuthState.DisplayingQR) {
+                    val currentState = _authState.value as AuthState.DisplayingQR
+                    android.util.Log.d("AuthViewModel", "Token received via Bluetooth!")
+                    _authState.value = AuthState.Authenticated(
+                        provider = currentState.provider,
+                        accessToken = token,
+                        userEmail = null,
+                        userName = null
+                    )
+                    bluetoothAuthService.stopAdvertising()
+                    bluetoothAuthService.resetToken()
+                }
+            }
+        }
+    }
 
     fun resetInfo() {
         _authState.value = AuthState.Idle
+        bluetoothAuthService.stopAdvertising()
     }
 
     fun selectProvider(provider: AuthProvider) {
@@ -49,14 +76,16 @@ class AuthViewModel @Inject constructor(
                     qrCodeBitmap = qrBitmap,
                     userCode = response.userCode,
                     verificationUrl = response.verificationUrl,
-                    expiresAt = Long.MAX_VALUE // Set a very long timeout
+                    expiresAt = Long.MAX_VALUE
                 )
 
-                // Start polling
+                // Start Bluetooth advertising for direct token transfer
+                bluetoothAuthService.startAdvertising()
+                
+                // Also start OAuth polling as fallback
                 pollToken(provider, response.deviceCode, provider.getPollingInterval(response))
             }.onFailure { e ->
-                // Instead of showing an error, wait and then restart the auth flow.
-                delay(5000) // Wait 5 seconds before retrying
+                delay(5000)
                 startAuth(provider)
             }
         }
@@ -67,7 +96,7 @@ class AuthViewModel @Inject constructor(
         var isPolling = true
 
         while (isPolling) {
-            // Check if state changed (e.g., user cancelled)
+            // Check if state changed (e.g., Bluetooth token received or user cancelled)
             if (_authState.value !is AuthState.DisplayingQR) {
                 android.util.Log.d("AuthViewModel", "pollToken: State changed, stopping polling")
                 isPolling = false
@@ -79,8 +108,9 @@ class AuthViewModel @Inject constructor(
 
             val result = provider.pollToken(deviceCode)
             result.onSuccess { token ->
-                android.util.Log.d("AuthViewModel", "pollToken: SUCCESS! Token received")
+                android.util.Log.d("AuthViewModel", "pollToken: SUCCESS! Token received via OAuth")
                 isPolling = false
+                bluetoothAuthService.stopAdvertising()
                 _authState.value = AuthState.Authenticated(
                     provider = provider,
                     accessToken = token.accessToken,
@@ -92,28 +122,21 @@ class AuthViewModel @Inject constructor(
                 android.util.Log.d("AuthViewModel", "pollToken: Failed with message: $message")
                 when (message) {
                     "authorization_pending" -> {
-                        // User hasn't authenticated yet - continue polling
                         android.util.Log.d("AuthViewModel", "pollToken: Authorization pending, continuing...")
-                        // Just continue the loop
                     }
                     "slow_down" -> {
-                        // Rate limited - wait extra interval
                         android.util.Log.d("AuthViewModel", "pollToken: Slow down, waiting extra interval")
                         delay(interval * 2)
                     }
                     "expired_token" -> {
-                        // Device code expired - stop polling, user needs to restart
                         android.util.Log.w("AuthViewModel", "pollToken: Device code expired")
                         isPolling = false
-                        // Don't auto-restart - keep displaying current QR so user knows to restart
                     }
                     "access_denied" -> {
-                        // User denied access - stop polling
                         android.util.Log.w("AuthViewModel", "pollToken: Access denied by user")
                         isPolling = false
                     }
                     else -> {
-                        // Network error or other temporary issue - just wait and retry
                         android.util.Log.w("AuthViewModel", "pollToken: Temporary error ($message), will retry")
                         delay(interval)
                     }
@@ -142,4 +165,10 @@ class AuthViewModel @Inject constructor(
         }
         return bitmap
     }
+    
+    override fun onCleared() {
+        super.onCleared()
+        bluetoothAuthService.stopAdvertising()
+    }
 }
+

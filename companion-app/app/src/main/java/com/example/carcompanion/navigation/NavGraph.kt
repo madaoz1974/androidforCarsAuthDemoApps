@@ -71,6 +71,13 @@ fun NavGraph(
             if (providerInfo != null) {
                 val authViewModel: AuthViewModel = hiltViewModel()
                 val customTabsHelper = authViewModel.customTabsHelper
+                val bluetoothScanState by authViewModel.scanState.collectAsState()
+                val bluetoothConnectionState by authViewModel.connectionState.collectAsState()
+                
+                // Start Bluetooth scanning when entering this screen
+                LaunchedEffect(Unit) {
+                    authViewModel.startBluetoothScan()
+                }
                 
                 ProviderConfirmScreen(
                     providerInfo = providerInfo,
@@ -78,6 +85,7 @@ fun NavGraph(
                         customTabsHelper.openAuthUrl(providerInfo)
                     },
                     onCancel = {
+                        authViewModel.stopBluetoothScan()
                         scanViewModel.resetScan()
                         navController.popBackStack(Screen.Home.route, false)
                     }
