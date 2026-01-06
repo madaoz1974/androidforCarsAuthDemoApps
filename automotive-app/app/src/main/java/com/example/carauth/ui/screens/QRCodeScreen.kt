@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,96 +32,111 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.carauth.R
 import com.example.carauth.auth.AuthState
+import com.example.carauth.bluetooth.FakeBluetoothAuthService
+import com.example.carauth.ui.debug.BluetoothDebugPanel
 
 @Composable
 fun QRCodeScreen(
     state: AuthState.DisplayingQR,
     onCancel: () -> Unit,
+    fakeBluetoothService: FakeBluetoothAuthService? = null,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+            .verticalScroll(rememberScrollState())
     ) {
-        // QR Code
-        Box(
+        Row(
             modifier = Modifier
-                .background(Color.White)
-                .padding(16.dp)
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                bitmap = state.qrCodeBitmap.asImageBitmap(),
-                contentDescription = "QR Code",
-                modifier = Modifier.size(300.dp)
-            )
-        }
-        
-        Spacer(modifier = Modifier.width(48.dp))
-        
-        // Instructions
-        Column(
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = stringResource(R.string.scan_qr_code),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Text(
-                text = stringResource(R.string.or_enter_code),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = state.userCode,
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold,
-                color = state.provider.brandColor,
-                letterSpacing = 8.sp
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = state.verificationUrl,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically
+            // QR Code
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(16.dp)
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp,
-                    color = state.provider.brandColor
+                Image(
+                    bitmap = state.qrCodeBitmap.asImageBitmap(),
+                    contentDescription = "QR Code",
+                    modifier = Modifier.size(300.dp)
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+            }
+            
+            Spacer(modifier = Modifier.width(48.dp))
+            
+            // Instructions
+            Column(
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
-                    text = stringResource(R.string.waiting_for_auth),
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = stringResource(R.string.scan_qr_code),
+                    style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Button(onClick = onCancel) {
-                Text(stringResource(R.string.cancel))
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = stringResource(R.string.or_enter_code),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = state.userCode,
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = state.provider.brandColor,
+                    letterSpacing = 8.sp
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = state.verificationUrl,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(48.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = state.provider.brandColor
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = stringResource(R.string.waiting_for_auth),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                Button(onClick = onCancel) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         }
+        
+        // Debug panel (only visible in debug builds with fake Bluetooth)
+        BluetoothDebugPanel(
+            fakeBluetoothService = fakeBluetoothService
+        )
     }
 }
+

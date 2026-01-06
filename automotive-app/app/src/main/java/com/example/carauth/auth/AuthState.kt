@@ -23,4 +23,9 @@ sealed class AuthState {
         val userEmail: String?,
         val userName: String?
     ) : AuthState()
+    data class Error(
+        val message: String,
+        val canRetry: Boolean
+    ) : AuthState()
 }
+

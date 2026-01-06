@@ -18,12 +18,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Bluetooth GATT Server for receiving authentication tokens from companion device
+ * Real Bluetooth GATT Server implementation for receiving authentication tokens from companion device.
+ * This implementation requires actual Bluetooth hardware and will not work on emulators.
  */
 @Singleton
 class BluetoothAuthService @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : BluetoothAuthServiceInterface {
     companion object {
         private const val TAG = "BluetoothAuthService"
         
@@ -39,16 +40,16 @@ class BluetoothAuthService @Inject constructor(
     private var advertiser: BluetoothLeAdvertiser? = null
     
     private val _receivedToken = MutableStateFlow<String?>(null)
-    val receivedToken: StateFlow<String?> = _receivedToken.asStateFlow()
+    override val receivedToken: StateFlow<String?> = _receivedToken.asStateFlow()
     
     private val _isAdvertising = MutableStateFlow(false)
-    val isAdvertising: StateFlow<Boolean> = _isAdvertising.asStateFlow()
+    override val isAdvertising: StateFlow<Boolean> = _isAdvertising.asStateFlow()
     
     private val _connectionState = MutableStateFlow<BluetoothConnectionState>(BluetoothConnectionState.Disconnected)
-    val connectionState: StateFlow<BluetoothConnectionState> = _connectionState.asStateFlow()
+    override val connectionState: StateFlow<BluetoothConnectionState> = _connectionState.asStateFlow()
     
     @SuppressLint("MissingPermission")
-    fun initialize(): Boolean {
+    override fun initialize(): Boolean {
         bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         bluetoothAdapter = bluetoothManager?.adapter
         
@@ -72,7 +73,7 @@ class BluetoothAuthService @Inject constructor(
     }
     
     @SuppressLint("MissingPermission")
-    fun startAdvertising() {
+    override fun startAdvertising() {
         if (!initialize()) {
             Log.e(TAG, "Failed to initialize Bluetooth")
             return
@@ -128,7 +129,7 @@ class BluetoothAuthService @Inject constructor(
     }
     
     @SuppressLint("MissingPermission")
-    fun stopAdvertising() {
+    override fun stopAdvertising() {
         advertiser?.stopAdvertising(advertiseCallback)
         gattServer?.close()
         gattServer = null
@@ -137,7 +138,7 @@ class BluetoothAuthService @Inject constructor(
         Log.d(TAG, "Stopped BLE advertising")
     }
     
-    fun resetToken() {
+    override fun resetToken() {
         _receivedToken.value = null
     }
     

@@ -46,6 +46,22 @@ android {
             )
         }
     }
+    
+    // Product flavors for environment switching
+    flavorDimensions += "environment"
+    productFlavors {
+        create("emulator") {
+            dimension = "environment"
+            // Use fake Bluetooth on emulator
+            buildConfigField("boolean", "USE_FAKE_BLUETOOTH", "true")
+        }
+        create("device") {
+            dimension = "environment"
+            // Use real Bluetooth on physical device
+            buildConfigField("boolean", "USE_FAKE_BLUETOOTH", "false")
+        }
+    }
+    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
