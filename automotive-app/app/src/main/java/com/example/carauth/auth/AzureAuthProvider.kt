@@ -92,19 +92,19 @@ class AzureAuthProvider @Inject constructor(
 
                 if (response.isSuccessful) {
                     val body = response.body?.string()
+                    android.util.Log.d("AzureAuthProvider", "pollToken SUCCESS: $body")
                     val token = parseTokenResponse(body)
                     Result.success(token)
                 } else {
-                     val body = response.body?.string()
+                    val body = response.body?.string()
+                    android.util.Log.d("AzureAuthProvider", "pollToken response: $body")
                     val json = JSONObject(body ?: "{}")
-                    val error = json.optString("error")
-                    if (error == "authorization_pending" || error == "slow_down") {
-                         Result.failure(AuthException(error))
-                    } else {
-                        Result.failure(AuthException("Failed to get token: $error"))
-                    }
+                    val error = json.optString("error", "unknown_error")
+                    // Return raw error code for AuthViewModel to handle
+                    Result.failure(AuthException(error))
                 }
             } catch (e: Exception) {
+                android.util.Log.e("AzureAuthProvider", "pollToken exception: ${e.message}")
                 Result.failure(e)
             }
         }
